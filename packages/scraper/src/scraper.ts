@@ -31,7 +31,7 @@ async function fetchPage(
   url: string,
   options: { headers?: Record<string, string>; timeout?: number; browser?: string },
 ): Promise<string> {
-  const { headers = {}, timeout = 30_000, browser } = options;
+  const { headers = {}, timeout = 120_000, browser } = options;
 
   const { Impit } = await import("impit");
 
@@ -42,8 +42,19 @@ async function fetchPage(
     const client = new Impit({
       timeout,
       headers: {
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Sec-Ch-Ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"macOS"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
         ...headers,
@@ -97,7 +108,7 @@ export async function fetchAndQuery(
     await Promise.race([
       window.happyDOM.waitUntilComplete(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("happy-dom timeout")), 5000),
+        setTimeout(() => reject(new Error("happy-dom timeout")), 15_000),
       ),
     ]);
   } catch {

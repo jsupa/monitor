@@ -62,4 +62,4 @@ COPY --from=monitor-builder /app/packages/scraper/dist ./packages/scraper/dist/
 RUN pnpm install --prod --frozen-lockfile
 
 ENV NODE_ENV=production
-CMD ["node", "--max-old-space-size=512", "apps/monitor/dist/index.js"]
+CMD ["node", "--max-old-space-size=4096", "apps/monitor/dist/index.js"]

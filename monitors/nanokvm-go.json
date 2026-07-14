@@ -8,7 +8,22 @@
   "enabled": true,
   "browser": "chrome136",
   "waitForSelector": "[data-testid='reward-list-item']",
-  "headers": {},
+  "headers": {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "accept-language": "en-US,en;q=0.9",
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
+    "sec-ch-ua": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "upgrade-insecure-requests": "1",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "cookie": "cf_clearance=pcXMWlErz8EW.rTJaYrzOub3PtTRB9Bz5d_RwKmMgrw-1784062757-1.2.1.1-GhQBi7uakbmdyKvrJgaJxg58ZJLbLQbvXrtd2_y8sdDygCJdO0e2TgdhwGixez1aeiTs5qNA5S0DvHtowTlDEHcpjUVP16bKOYy0W3.OoHP_AdtoMAunWHW06hG5C3tVywjAqu5XFCrFQll5YDdyhgnNcfE1I8AoNovgNSuFXms5tEB.qa1tBeXOgFfmvCxzsLJElpEG0wRxPEkNVtGMdaluIS26qTJ4gnDRQkN8DPlDavgrjupM4s8VknCTE999Z.z1OlEN4l_9e4SeqGOXkRRpETV2duDBBs9PBfo9nMo.CFC3KCcugZYgO6Fv3eYxFIuWo1tLEaMfGYAKHGeSkA; _ksr_session=TcyiP4oOTdKFy4yjjdi8zU1hbQCKYy9RNo8xV0RCEYUCAtrLDPZzuvUvuDEBUxg0jnpQQnCXdoDetpxFrG1Co8ZAqOOedrSHNzZE4h9IKS34e%2FEDQ6BnO4kzGFfOnW%2B53o65QlW4m64mhtmsH5C%2FAbq4isCvMngeAq9ow8gw00PEp9Ki%2Fv2aHn7hcY4K7lUSImDNlPprFB8NAEKGm1hkjV%2BMGcx1r89hMhyEniZpgwPWVNOjXeIViiQG6UtPKcXypTAVGtsdiBThUGhldhlya7YlVwbRg5UFBMtq29uL%2F8cPDGnpd0rzNZ2dfzEIada2Q2gv26H9GZuXl5xBRuPBknlYrZ12oZJyUe%2BtgtYL9foxPjoxrvbfeOGOvmZ0wJ4j7zZN4x4lv5CmglA8kgTULQjNPOWdFqC4--osuUHTMzO5XXST37--kAF1K8i5c8hM2SvjtlkWng%3D%3D"
+  },
   "dataSchema": {
     "description": "Kickstarter reward tiers scraped from the pledge page",
     "fields": ["currency", "rewards"]
