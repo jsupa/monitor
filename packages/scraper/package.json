@@ -1,0 +1,26 @@
+{
+  "name": "@monitor/scraper",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "happy-dom": "^16.8.1",
+    "impit": "^0.14.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

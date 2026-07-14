@@ -1,0 +1,15 @@
+{
+  "name": "example-price-check",
+  "url": "https://example.com/product",
+  "schedule": "*/15 * * * *",
+  "selector": ".price-value",
+  "attribute": "textContent",
+  "notifyUrl": null,
+  "enabled": false,
+  "waitForSelector": null,
+  "headers": {},
+  "dataSchema": {
+    "description": "Product price information from an e-commerce page",
+    "fields": ["title", "price", "currency", "availability"]
+  }
+}

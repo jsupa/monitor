@@ -1,0 +1,17 @@
+{
+  "name": "nanokvm-go-rewards",
+  "url": "https://www.kickstarter.com/projects/zepan/nanokvm-go-worlds-first-ai-native-4k-usb-c-kvm/pledge/new?clicked_reward=false",
+  "schedule": "*/5 * * * *",
+  "selector": "[data-initial_state]",
+  "attribute": "data-initial_state",
+  "notifyUrl": null,
+  "enabled": false,
+  "browser": "chrome136",
+  "headers": {},
+  "rawDataPattern": "data-initial_state=\"([^\"]+)\"",
+  "dataSchema": {
+    "description": "Kickstarter reward tiers from embedded JSON",
+    "fields": ["rewards", "totalBackers", "currency", "project"]
+  },
+  "parsePrompt": null
+}
