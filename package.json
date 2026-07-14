@@ -1,15 +1,26 @@
 {
   "name": "monitor",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.15.4",
+  "version": "1.0.4",
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "sync:monitors": "tsx sync-monitors.ts",
+    "docker:build": "VERSION=$(node -p \"require('./package.json').version\") && docker build --platform linux/amd64 --target monitor-runner -t reg.kubov.link/ezworkz/monitor:${VERSION} .",
+    "docker:push": "VERSION=$(node -p \"require('./package.json').version\") && docker push reg.kubov.link/ezworkz/monitor:${VERSION}",
+    "docker:release": "VERSION=$(node -p \"require('./package.json').version\") && pnpm docker:build && pnpm docker:push && docker tag reg.kubov.link/ezworkz/monitor:${VERSION} reg.kubov.link/ezworkz/monitor:latest && docker push reg.kubov.link/ezworkz/monitor:latest",
+    "version:show": "node -p \"require('./package.json').version\""
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "tsx": "^4.21.0",
     "turbo": "^2.3.3",
     "typescript": "^5.7.3"
   }

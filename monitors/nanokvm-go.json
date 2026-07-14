@@ -2,16 +2,16 @@
   "name": "nanokvm-go-rewards",
   "url": "https://www.kickstarter.com/projects/zepan/nanokvm-go-worlds-first-ai-native-4k-usb-c-kvm/pledge/new?clicked_reward=false",
   "schedule": "*/5 * * * *",
-  "selector": "[data-initial_state]",
-  "attribute": "data-initial_state",
+  "selector": "[class*='kds-col-span-8'][class*='kds-col-span-6']",
+  "attribute": "textContent",
   "notifyUrl": null,
-  "enabled": false,
+  "enabled": true,
   "browser": "chrome136",
+  "waitForSelector": "[data-testid='reward-list-item']",
   "headers": {},
-  "rawDataPattern": "data-initial_state=\"([^\"]+)\"",
   "dataSchema": {
-    "description": "Kickstarter reward tiers from embedded JSON",
-    "fields": ["rewards", "totalBackers", "currency", "project"]
+    "description": "Kickstarter reward tiers scraped from the pledge page",
+    "fields": ["currency", "rewards"]
   },
-  "parsePrompt": null
+  "parsePrompt": "Extract reward data from Kickstarter page text into JSON. Find all rewards (both available and unavailable sections).\n\nFor each reward extract:\n- name: the reward title (e.g. \"NanoKVM-Go\")\n- price: number (e.g. 540)\n- priceUSD: the \"About $\" amount if present (e.g. 69)\n- shipping: shipping cost as number (e.g. 120)\n- backers: number of backers\n- limit: total limit if shown (e.g. 100 in \"0 of 100 available\"), null if unlimited\n- remaining: remaining slots (e.g. 0 in \"0 of 100 available\"), null if unlimited\n- available: true/false (false if \"All gone\" or \"0 of X available\")\n- description: the reward description text\n- includes: array of item names included\n- estimatedDelivery: date string (e.g. \"Aug 2026\")\n- shipsTo: shipping location text\n\nReturn JSON: {\"currency\": \"HKD\", \"rewards\": [...]}"
 }

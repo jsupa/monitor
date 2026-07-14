@@ -6,12 +6,19 @@ A Node.js/TypeScript monorepo that monitors website elements for changes on cron
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  monitors/   │────▶│  @monitor/   │────▶│  @monitor/   │
-│  *.json      │     │  core        │     │  scheduler   │
-│  (configs)   │     │  load+validate│     │  node-cron   │
-└─────────────┘     └──────────────┘     └──────┬───────┘
-                                                 │ cron tick
-                                                 ▼
+│  monitors/   │────▶│  sync:monitors│────▶│   MongoDB    │
+│  *.json      │     │  upsert to DB │     │ MonitorConfig│
+│  (configs)   │     └──────────────┘     │  collection  │
+└─────────────┘                           └──────┬───────┘
+                                                  │
+                                                  ▼
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│  @monitor/  │◀────│  load from   │     │  @monitor/   │
+│  scheduler  │     │  MongoDB     │     │  app         │
+│  node-cron  │     └──────────────┘     │  entry       │
+└──────┬──────┘                          └──────────────┘
+       │ cron tick
+       ▼
 ┌──────────────────────────────────────────────────────────┐
 │                    Worker Pipeline                         │
 │                                                          │
@@ -32,7 +39,7 @@ A Node.js/TypeScript monorepo that monitors website elements for changes on cron
 | `@monitor/core` | Shared types, Zod schemas, config loader | `zod` |
 | `@monitor/scraper` | Page fetching + DOM parsing | `impit`, `happy-dom` |
 | `@monitor/analyzer` | LLM-powered JSON parsing + change diffing | `openai` (DeepSeek-compatible) |
-| `@monitor/database` | MongoDB connection + snapshot storage | `mongoose` |
+| `@monitor/database` | MongoDB connection + models (snapshots, monitor configs) | `mongoose` |
 | `@monitor/notifier` | Discord webhook rich embeds | — |
 | `@monitor/app` | CLI entry point, cron scheduler, worker | `node-cron`, `tsdown` |
 
@@ -73,9 +80,6 @@ LLM_API_KEY=sk-your-deepseek-api-key
 
 # Required: MongoDB connection
 MONGODB_URI=mongodb://localhost:27017/monitor
-
-# Optional: custom paths
-# MONITORS_DIR=./monitors                    # default
 ```
 
 > **Using OpenAI instead of DeepSeek?** Set `LLM_BASE_URL=https://api.openai.com/v1` and `LLM_MODEL=gpt-4o-mini`.
@@ -86,14 +90,22 @@ MONGODB_URI=mongodb://localhost:27017/monitor
 pnpm build
 ```
 
-### 4. Create a monitor config
+### 4. Create and sync monitor configs
 
-Place a `.json` file in the `monitors/` directory. See the [Monitor Config](#monitor-config) section below for details, or copy the example:
+Place `.json` files in the `monitors/` directory, then sync them to MongoDB:
 
 ```bash
+# Create a monitor config
 cp monitors/example.json monitors/my-site.json
 # Edit my-site.json with your URL, selector, and schedule
+
+# Sync all monitors from ./monitors/ to MongoDB
+pnpm sync:monitors
 ```
+
+**Monitor configs are stored in MongoDB** — the app loads them from the database at runtime. The `sync:monitors` command reads all `.json` files from `./monitors/`, validates them, and upserts them into the `monitorconfigs` MongoDB collection by name.
+
+To update monitors after editing the JSON files, just run `pnpm sync:monitors` again. Disabled monitors (`"enabled": false`) are synced too but won't be loaded by the app.
 
 ### 5. Run
 
@@ -162,12 +174,9 @@ Each monitor is a JSON file in the `monitors/` directory. Every file represents 
 
 See [`monitors/nanokvm-go.json`](./monitors/nanokvm-go.json) for a real-world example that:
 
-- Scrapes `#pledge-app` every 5 minutes
-- Uses `innerHTML` to capture all reward tiers
-- Has a custom `parsePrompt` teaching the LLM to extract:
-  - Reward name, price (HKD + USD), shipping cost
-  - Backer count, availability status (available/limited/gone)
-  - Remaining count for limited tiers (e.g. "22 of 180")
+- Scrapes Kickstarter every 5 minutes
+- Uses `rawDataPattern` to extract embedded JSON from `data-initial_state`
+- Has a custom `dataSchema` teaching the LLM to extract reward tiers
 - Sends a rich Discord embed when backer counts change or tiers sell out
 
 ### Example: Simple price watch
@@ -211,6 +220,8 @@ If `parsePrompt` is set in the monitor config, it replaces the default extractio
 - `rawText` — original scraped text
 - `scrapedAt` — timestamp
 
+**Monitor configs** are also stored in MongoDB (in the `monitorconfigs` collection), synced via `pnpm sync:monitors`. The app loads configs from the database at startup, so no file mounts are needed in production.
+
 On each new check, the oldest snapshot is pruned (only 2 kept).
 
 ### Notifications
@@ -239,6 +250,7 @@ monitor/
 ├── turbo.json                   # Turborepo build pipeline
 ├── tsconfig.base.json           # Shared TypeScript config
 ├── .env.example                 # Environment template
+├── sync-monitors.ts             # CLI script: sync monitors/ → MongoDB
 │
 ├── packages/
 │   ├── core/src/                # Types, schemas, config loader
@@ -263,8 +275,30 @@ pnpm build            # Build all packages (Turborepo)
 pnpm dev              # Watch mode for all packages
 pnpm clean            # Remove build artifacts
 
+# Sync monitor configs from ./monitors/ to MongoDB
+pnpm sync:monitors
+
 # Run the monitor app
 pnpm --filter @monitor/app start
+```
+
+## Docker
+
+```bash
+# Build and push
+pnpm docker:release
+
+# Or just build locally
+pnpm docker:build
+
+# Run (MongoDB must be accessible from the container)
+docker compose up -d
+```
+
+The app loads monitor configs from MongoDB at runtime. Run `pnpm sync:monitors` before starting the container to seed the database, or run it inside the container:
+
+```bash
+docker compose exec monitor node -e "require('child_process').execSync('pnpm sync:monitors', {cwd:'/app', stdio:'inherit'})"
 ```
 
 ## Deployment

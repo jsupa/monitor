@@ -36,12 +36,29 @@ export async function runMonitorCheck(config: MonitorConfig): Promise<void> {
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">");
 
+    let rawData: Record<string, unknown>;
     try {
-      const raw = JSON.parse(decoded);
-      parsedData = transformRawData(raw, config);
+      rawData = JSON.parse(decoded);
     } catch {
       console.error(`[worker:${config.name}] JSON parse failed.`);
       return;
+    }
+
+    // If a parsePrompt is set, run AI extraction on the raw JSON
+    if (config.parsePrompt) {
+      try {
+        const rawJsonStr = JSON.stringify(rawData, null, 2).slice(0, 30_000);
+        parsedData = await parseContent(
+          rawJsonStr,
+          config.dataSchema,
+          config.parsePrompt ?? undefined,
+        );
+      } catch (err) {
+        console.error(`[worker:${config.name}] AI parse failed:`, (err as Error).message);
+        parsedData = transformRawData(rawData, config);
+      }
+    } else {
+      parsedData = transformRawData(rawData, config);
     }
   } else {
     // Standard path: CSS selector + happy-dom + AI parse
@@ -132,10 +149,128 @@ export async function runMonitorCheck(config: MonitorConfig): Promise<void> {
   console.log(`[worker:${config.name}] Stored.`);
 }
 
-/** Transform raw extracted JSON into the monitor's expected shape. */
+/** Transform raw extracted JSON into a focused subset for AI parsing. */
 function transformRawData(
   raw: Record<string, unknown>,
-  config: MonitorConfig,
+  _config: MonitorConfig,
 ): Record<string, unknown> {
-  return raw;
+  // Kickstarter: hydrateData.project.rewards.nodes + project metadata
+  const ks = extractKickstarterData(raw);
+  if (ks) return ks;
+
+  // Generic: search for project-like data with rewards
+  const found = findRewards(raw);
+  if (found) return found;
+
+  // Fallback: top-level keys
+  const slim: Record<string, unknown> = {};
+  for (const key of Object.keys(raw).slice(0, 30)) {
+    slim[key] = raw[key];
+  }
+  return slim;
+}
+
+/** Extract Kickstarter project data from the hydrateData structure. */
+function extractKickstarterData(
+  raw: Record<string, unknown>,
+): Record<string, unknown> | null {
+  try {
+    const hd = raw.hydrateData as Record<string, unknown> | undefined;
+    if (!hd) return null;
+    const project = hd.project as Record<string, unknown> | undefined;
+    if (!project) return null;
+    const rewards = project.rewards as Record<string, unknown> | undefined;
+    const nodes = rewards?.nodes as Array<Record<string, unknown>> | undefined;
+    if (!nodes || nodes.length === 0) return null;
+
+    const slimRewards = nodes.map((r: Record<string, unknown>) => ({
+      name: r.name,
+      description: r.description,
+      price: (r.amount as Record<string, unknown>)?.amount,
+      currency: (r.amount as Record<string, unknown>)?.currency,
+      backersCount: r.backersCount,
+      limit: r.limit ?? null,
+      remainingQuantity: r.remainingQuantity ?? null,
+      available: r.available,
+      estimatedDeliveryOn: r.estimatedDeliveryOn,
+      shippingSummary: r.shippingSummary,
+      isMaxPledge: r.isMaxPledge,
+      items: ((r.items as Record<string, unknown>)?.nodes as Array<Record<string, unknown>>)
+        ?.map((i: Record<string, unknown>) => i.name).filter(Boolean) ?? [],
+    }));
+
+    return {
+      projectName: project.name,
+      projectSlug: project.slug,
+      currency: project.currency,
+      projectDeadline: project.deadlineAt,
+      rewards: slimRewards,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Recursively search for a project node with rewards inside a Kickstarter JSON. */
+function findRewards(
+  obj: unknown,
+  depth = 0,
+): Record<string, unknown> | null {
+  if (depth > 8 || obj == null || typeof obj !== "object") return null;
+
+  if (Array.isArray(obj)) {
+    // If this array has reward-like objects (have title/price/backers), return the parent context
+    for (const item of obj.slice(0, 3)) {
+      if (item && typeof item === "object") {
+        const keys = Object.keys(item as Record<string, unknown>);
+        const rewardKeys = ["title", "price", "pledgeAmount", "backersCount", "limit", "remaining", "available"];
+        const matchCount = rewardKeys.filter((k) => keys.includes(k)).length;
+        if (matchCount >= 3) {
+          return { rewards: obj.slice(0, 50) };
+        }
+      }
+    }
+    // Recurse into array items
+    for (const item of obj.slice(0, 20)) {
+      const found = findRewards(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const record = obj as Record<string, unknown>;
+  const keys = Object.keys(record);
+
+  // If this looks like a project node (has rewards + project-like keys), return slimmed version
+  const projectKeys = ["rewards", "backersCount", "currency", "name", "slug", "state", "goal"];
+  const projectMatch = projectKeys.filter((k) => keys.includes(k)).length;
+  if (projectMatch >= 3 && Array.isArray(record.rewards)) {
+    return {
+      name: record.name,
+      slug: record.slug,
+      currency: record.currency,
+      backersCount: record.backersCount,
+      goal: record.goal,
+      state: record.state,
+      pledged: record.pledged,
+      rewards: (record.rewards as unknown[]).slice(0, 50),
+    };
+  }
+
+  // Recurse into object values
+  const priorityKeys = [
+    "project", "projectPage", "pageProps", "apolloState", "props",
+    "initialState", "state", "data", "rootQuery", "ROOT_QUERY",
+  ];
+  const sortedKeys = [
+    ...priorityKeys.filter((k) => keys.includes(k)),
+    ...keys.filter((k) => !priorityKeys.includes(k)),
+  ];
+
+  for (const key of sortedKeys.slice(0, 30)) {
+    const found = findRewards(record[key], depth + 1);
+    if (found) return found;
+  }
+
+  return null;
 }

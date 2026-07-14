@@ -38,7 +38,7 @@ export async function parseContent(
   const model = getModel();
 
   const systemPrompt = parsePrompt
-    ? parsePrompt
+    ? `${parsePrompt}\n\nReturn ONLY a valid JSON object. No markdown, no explanations.`
     : buildDefaultParsePrompt(dataSchema);
 
   const response = await client.chat.completions.create({
